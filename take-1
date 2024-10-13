@@ -1,0 +1,55 @@
+import pandas as pd
+import re
+from datetime import datetime
+
+# Define the input and output file paths
+input_file = 'whatsapp_chat.txt'  # Replace with your chat log file
+output_file = f"{datetime.now().strftime('%m_%d_%Y')}_groomed.csv"
+
+# Keywords to identify tasks
+task_keywords = ['can', 'will', 'going to', 'completed', 'done', 'finished', 'need', 'bring', 'take']
+
+def parse_chat(file_path):
+    volunteer_data = []
+
+    with open(file_path, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        
+        for line in lines:
+            # Match the date and time format in the chat log
+            match = re.match(r'\[(.*?)\] (.*?): (.*)', line)
+            if match:
+                timestamp, sender, message = match.groups()
+                
+                # Check if the message contains task-related keywords
+                if any(keyword in message.lower() for keyword in task_keywords):
+                    status = 'To Do'  # Default status
+                    # Check for specific statuses in the message
+                    if 'completed' in message.lower() or 'done' in message.lower():
+                        status = 'Done'
+                    elif 'in progress' in message.lower():
+                        status = 'In Progress'
+                    elif 'stalled' in message.lower():
+                        status = 'Stalled'
+
+                    # Append the volunteer info
+                    volunteer_data.append({
+                        'Name': sender.strip(),
+                        'Item': message.strip(),
+                        'Status': status
+                    })
+
+    return volunteer_data
+
+def save_to_csv(data, output_path):
+    df = pd.DataFrame(data)
+    df.to_csv(output_path, index=False)
+
+if __name__ == '__main__':
+    volunteer_data = parse_chat(input_file)
+    if volunteer_data:
+        save_to_csv(volunteer_data, output_file)
+        print(f"Volunteer data saved to {output_file}")
+    else:
+        print("No volunteer data found.")
+
